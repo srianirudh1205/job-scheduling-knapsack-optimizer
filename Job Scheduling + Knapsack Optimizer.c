@@ -8,14 +8,12 @@ typedef struct {
     int profit;
 } Job;
 
-// Compare function for sorting jobs by profit (descending)
+// Compare function (descending profit)
 int compare(const void *a, const void *b) {
-    Job *j1 = (Job *)a;
-    Job *j2 = (Job *)b;
-    return j2->profit - j1->profit;
+    return ((Job *)b)->profit - ((Job *)a)->profit;
 }
 
-// Greedy Algorithm: Job Scheduling
+// Greedy Job Scheduling (Enhanced)
 void jobScheduling(Job jobs[], int n) {
     qsort(jobs, n, sizeof(Job), compare);
 
@@ -24,15 +22,17 @@ void jobScheduling(Job jobs[], int n) {
         if (jobs[i].deadline > maxDeadline)
             maxDeadline = jobs[i].deadline;
 
-    char result[maxDeadline];
-    int slot[maxDeadline];
+    int *slot = (int *)malloc(maxDeadline * sizeof(int));
     for (int i = 0; i < maxDeadline; i++)
         slot[i] = -1;
+
+    int totalProfit = 0;
 
     for (int i = 0; i < n; i++) {
         for (int j = jobs[i].deadline - 1; j >= 0; j--) {
             if (slot[j] == -1) {
                 slot[j] = i;
+                totalProfit += jobs[i].profit;
                 break;
             }
         }
@@ -41,30 +41,63 @@ void jobScheduling(Job jobs[], int n) {
     printf("\nGreedy Job Scheduling Result:\n");
     for (int i = 0; i < maxDeadline; i++) {
         if (slot[i] != -1)
-            printf("Job %c (Profit: %d)\n", jobs[slot[i]].id, jobs[slot[i]].profit);
+            printf("Slot %d -> Job %c (Profit: %d)\n",
+                   i + 1,
+                   jobs[slot[i]].id,
+                   jobs[slot[i]].profit);
     }
+
+    printf("Total Profit = %d\n", totalProfit);
+
+    free(slot);
 }
 
-// Dynamic Programming: Knapsack Problem
+// Knapsack with item tracking
 int knapsack(int W, int wt[], int val[], int n) {
-    int dp[n+1][W+1];
+    int **dp = (int **)malloc((n + 1) * sizeof(int *));
+    for (int i = 0; i <= n; i++)
+        dp[i] = (int *)malloc((W + 1) * sizeof(int));
 
     for (int i = 0; i <= n; i++) {
         for (int w = 0; w <= W; w++) {
             if (i == 0 || w == 0)
                 dp[i][w] = 0;
-            else if (wt[i-1] <= w)
-                dp[i][w] = (val[i-1] + dp[i-1][w-wt[i-1]] > dp[i-1][w]) ?
-                           val[i-1] + dp[i-1][w-wt[i-1]] : dp[i-1][w];
+            else if (wt[i - 1] <= w)
+                dp[i][w] = (val[i - 1] + dp[i - 1][w - wt[i - 1]] > dp[i - 1][w])
+                           ? val[i - 1] + dp[i - 1][w - wt[i - 1]]
+                           : dp[i - 1][w];
             else
-                dp[i][w] = dp[i-1][w];
+                dp[i][w] = dp[i - 1][w];
         }
     }
-    return dp[n][W];
+
+    // Backtracking to find selected items
+    int res = dp[n][W];
+    int w = W;
+
+    printf("\nSelected items:\n");
+    for (int i = n; i > 0 && res > 0; i--) {
+        if (res != dp[i - 1][w]) {
+            printf("Item %d (Value: %d, Weight: %d)\n",
+                   i, val[i - 1], wt[i - 1]);
+
+            res -= val[i - 1];
+            w -= wt[i - 1];
+        }
+    }
+
+    int result = dp[n][W];
+
+    // Free memory
+    for (int i = 0; i <= n; i++)
+        free(dp[i]);
+    free(dp);
+
+    return result;
 }
 
 int main() {
-    // Example for Job Scheduling
+    // Job Scheduling Example
     Job jobs[] = {
         {'A', 2, 100},
         {'B', 1, 19},
@@ -72,17 +105,19 @@ int main() {
         {'D', 1, 25},
         {'E', 3, 15}
     };
+
     int n = sizeof(jobs) / sizeof(jobs[0]);
     jobScheduling(jobs, n);
 
-    // Example for Knapsack
+    // Knapsack Example
     int val[] = {60, 100, 120};
     int wt[] = {10, 20, 30};
     int W = 50;
     int items = sizeof(val) / sizeof(val[0]);
 
     printf("\nDynamic Programming Knapsack Result:\n");
-    printf("Maximum value in Knapsack = %d\n", knapsack(W, wt, val, items));
+    int maxVal = knapsack(W, wt, val, items);
+    printf("Maximum value = %d\n", maxVal);
 
     return 0;
 }
